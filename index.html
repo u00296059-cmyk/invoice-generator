@@ -1,0 +1,1350 @@
+<!DOCTYPE html>
+<html lang="ur" data-theme="light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ledgerly — Invoice Generator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,500&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+/* ============================================================
+   TOKENS — Ledgerly design system
+   ============================================================ */
+:root{
+  --ink-900:#1A2540;
+  --ink-800:#212D4D;
+  --ink-700:#324066;
+  --gold-600:#A9762F;
+  --gold-500:#B8863E;
+  --gold-400:#D1A55E;
+  --paper-100:#FBF8F2;
+  --paper-200:#F4EFE4;
+  --paper-300:#E9E1D0;
+  --slate-600:#5B6478;
+  --slate-500:#75798a;
+  --green-600:#3F7D58;
+  --red-600:#B5423B;
+
+  --bg: var(--paper-100);
+  --bg-panel: #FFFFFF;
+  --bg-sunken: var(--paper-200);
+  --border: var(--paper-300);
+  --text-primary: var(--ink-900);
+  --text-secondary: var(--slate-600);
+  --accent: var(--gold-500);
+  --accent-ink: var(--ink-900);
+  --shadow-sm: 0 1px 2px rgba(26,37,64,0.06), 0 1px 1px rgba(26,37,64,0.04);
+  --shadow-md: 0 6px 20px rgba(26,37,64,0.08), 0 2px 6px rgba(26,37,64,0.05);
+  --shadow-lg: 0 20px 45px rgba(26,37,64,0.14), 0 6px 16px rgba(26,37,64,0.08);
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --font-display: 'Fraunces', serif;
+  --font-body: 'Inter', -apple-system, sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+[data-theme="dark"]{
+  --ink-900:#EDEAE0;
+  --bg:#12151E;
+  --bg-panel:#1B1F2B;
+  --bg-sunken:#161A24;
+  --border:#2C3242;
+  --text-primary:#EDEAE0;
+  --text-secondary:#9098AC;
+  --accent: var(--gold-400);
+  --accent-ink:#12151E;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 6px 20px rgba(0,0,0,0.35);
+  --shadow-lg: 0 24px 50px rgba(0,0,0,0.5);
+}
+
+*{box-sizing:border-box; margin:0; padding:0;}
+html{scroll-behavior:smooth;}
+body{
+  font-family:var(--font-body);
+  background:var(--bg);
+  color:var(--text-primary);
+  transition:background .35s ease, color .35s ease;
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+img{max-width:100%; display:block;}
+button{font-family:inherit; cursor:pointer;}
+input, select, textarea{font-family:inherit; color:inherit;}
+::selection{background:var(--gold-400); color:var(--ink-900);}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce){
+  *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+}
+
+/* ============================================================
+   HEADER
+   ============================================================ */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  display:flex; align-items:center; justify-content:space-between;
+  gap:16px;
+  padding:14px 28px;
+  background:var(--bg-panel);
+  border-bottom:1px solid var(--border);
+  box-shadow:var(--shadow-sm);
+}
+.brand{
+  display:flex; align-items:center; gap:10px;
+}
+.brand-mark{
+  width:34px; height:34px; border-radius:8px;
+  background:linear-gradient(155deg, var(--ink-900), var(--ink-700));
+  display:flex; align-items:center; justify-content:center;
+  color:var(--gold-400); font-family:var(--font-display); font-weight:600; font-size:18px;
+  box-shadow:var(--shadow-sm);
+  flex-shrink:0;
+}
+.brand-name{
+  font-family:var(--font-display); font-weight:600; font-size:20px; letter-spacing:.2px;
+}
+.brand-sub{
+  font-size:11px; color:var(--text-secondary); letter-spacing:.14em; text-transform:uppercase; margin-top:1px;
+}
+.topbar-actions{ display:flex; align-items:center; gap:10px; }
+
+.icon-btn{
+  width:40px; height:40px; border-radius:50%;
+  border:1px solid var(--border);
+  background:var(--bg-sunken);
+  display:flex; align-items:center; justify-content:center;
+  transition:transform .25s ease, box-shadow .25s ease, background .25s ease;
+  color:var(--text-primary);
+}
+.icon-btn:hover{ transform:translateY(-2px); box-shadow:var(--shadow-md); }
+.icon-btn:active{ transform:translateY(0) scale(.94); }
+.icon-btn svg{ width:19px; height:19px; }
+
+.theme-toggle{ position:relative; overflow:hidden; }
+.theme-toggle .sun, .theme-toggle .moon{
+  position:absolute; transition:transform .45s cubic-bezier(.68,-0.4,.27,1.4), opacity .3s ease;
+}
+[data-theme="light"] .theme-toggle .moon{ transform:translateY(30px) rotate(40deg); opacity:0; }
+[data-theme="light"] .theme-toggle .sun{ transform:translateY(0) rotate(0); opacity:1; }
+[data-theme="dark"] .theme-toggle .sun{ transform:translateY(-30px) rotate(-40deg); opacity:0; }
+[data-theme="dark"] .theme-toggle .moon{ transform:translateY(0) rotate(0); opacity:1; }
+
+/* ============================================================
+   LAYOUT
+   ============================================================ */
+.app-shell{
+  display:grid;
+  grid-template-columns: minmax(340px, 480px) 1fr;
+  gap:24px;
+  padding:24px;
+  align-items:start;
+  max-width:1600px;
+  margin:0 auto;
+}
+@media (max-width: 1080px){
+  .app-shell{ grid-template-columns: 1fr; }
+}
+
+/* ============================================================
+   FORM PANEL
+   ============================================================ */
+.form-panel{
+  background:var(--bg-panel);
+  border:1px solid var(--border);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-md);
+  overflow:hidden;
+  animation: rise .5s ease both;
+}
+@keyframes rise{
+  from{ opacity:0; transform:translateY(14px); }
+  to{ opacity:1; transform:translateY(0); }
+}
+
+.section{
+  border-bottom:1px solid var(--border);
+  padding:22px 24px;
+}
+.section:last-child{ border-bottom:none; }
+
+.section-head{
+  display:flex; align-items:center; gap:10px; margin-bottom:16px;
+}
+.section-num{
+  font-family:var(--font-mono); font-size:11px; color:var(--accent);
+  border:1px solid var(--border); border-radius:5px; padding:2px 7px;
+  background:var(--bg-sunken);
+}
+.section-title{
+  font-family:var(--font-display); font-weight:600; font-size:17px;
+}
+
+.field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+.field-row.single{ grid-template-columns:1fr; }
+.field{ display:flex; flex-direction:column; gap:6px; margin-bottom:12px; }
+.field:last-child{ margin-bottom:0; }
+.field-row .field{ margin-bottom:0; }
+
+label{ font-size:12.5px; font-weight:600; color:var(--text-secondary); letter-spacing:.01em; }
+label .opt{ font-weight:400; opacity:.7; }
+
+input[type="text"], input[type="email"], input[type="tel"], input[type="number"],
+input[type="date"], select, textarea{
+  width:100%;
+  padding:10px 12px;
+  border:1.5px solid var(--border);
+  border-radius:var(--radius-sm);
+  background:var(--bg-sunken);
+  font-size:14px;
+  color:var(--text-primary);
+  transition:border-color .2s ease, box-shadow .2s ease, background .2s ease;
+}
+textarea{ resize:vertical; min-height:70px; line-height:1.5; }
+input:focus, select:focus, textarea:focus{
+  outline:none;
+  border-color:var(--accent);
+  box-shadow:0 0 0 3px rgba(184,134,62,0.18);
+  background:var(--bg-panel);
+}
+input.invalid, textarea.invalid{
+  border-color:var(--red-600);
+  box-shadow:0 0 0 3px rgba(181,66,59,0.14);
+  animation: shake .35s ease;
+}
+@keyframes shake{
+  20%{ transform:translateX(-4px); } 40%{ transform:translateX(4px); }
+  60%{ transform:translateX(-3px); } 80%{ transform:translateX(3px); } 100%{ transform:translateX(0); }
+}
+.error-msg{
+  font-size:11.5px; color:var(--red-600); min-height:14px; display:none;
+}
+.error-msg.show{ display:block; }
+
+/* Logo uploader */
+.logo-drop{
+  display:flex; align-items:center; gap:14px;
+  padding:12px; border:1.5px dashed var(--border); border-radius:var(--radius-sm);
+  background:var(--bg-sunken); cursor:pointer; transition:border-color .2s ease, background .2s ease;
+}
+.logo-drop:hover{ border-color:var(--accent); }
+.logo-preview{
+  width:52px; height:52px; border-radius:8px; overflow:hidden;
+  background:var(--bg-panel); border:1px solid var(--border);
+  display:flex; align-items:center; justify-content:center; flex-shrink:0;
+}
+.logo-preview img{ width:100%; height:100%; object-fit:cover; }
+.logo-preview svg{ width:22px; height:22px; color:var(--text-secondary); }
+.logo-drop-text{ font-size:12.5px; color:var(--text-secondary); }
+.logo-drop-text b{ color:var(--text-primary); font-weight:600; }
+.logo-remove{
+  margin-inline-start:auto; font-size:12px; color:var(--red-600); font-weight:600;
+  background:none; border:none; text-decoration:underline; flex-shrink:0;
+}
+
+/* Items table (form side) */
+.items-list{ display:flex; flex-direction:column; gap:10px; }
+.item-row{
+  border:1px solid var(--border); border-radius:var(--radius-sm);
+  padding:12px; background:var(--bg-sunken);
+  display:grid; grid-template-columns:1fr 1fr; gap:8px;
+  position:relative;
+  animation: rise .35s ease both;
+}
+.item-row .field-full{ grid-column:1 / -1; }
+.item-row-top{ grid-column:1/-1; display:flex; justify-content:space-between; align-items:center; margin-bottom:2px;}
+.item-index{ font-family:var(--font-mono); font-size:11px; color:var(--accent); font-weight:600;}
+.item-delete{
+  width:26px; height:26px; border-radius:50%; border:1px solid var(--border);
+  background:var(--bg-panel); display:flex; align-items:center; justify-content:center;
+  color:var(--red-600); transition:transform .2s ease, background .2s ease;
+}
+.item-delete:hover{ background:var(--red-600); color:#fff; transform:rotate(90deg); }
+.item-delete svg{ width:13px; height:13px; }
+.item-row input{ padding:8px 10px; font-size:13.5px; }
+.item-line-total{
+  grid-column:1/-1; text-align:right; font-family:var(--font-mono); font-size:13px;
+  color:var(--text-secondary); padding-top:2px;
+}
+.item-line-total b{ color:var(--text-primary); }
+
+.btn{
+  display:inline-flex; align-items:center; justify-content:center; gap:8px;
+  padding:11px 18px; border-radius:var(--radius-sm); border:1.5px solid transparent;
+  font-weight:600; font-size:13.5px; letter-spacing:.01em;
+  transition:transform .18s ease, box-shadow .18s ease, background .18s ease, border-color .18s ease;
+  white-space:nowrap;
+}
+.btn svg{ width:16px; height:16px; flex-shrink:0; }
+.btn:active{ transform:scale(.96); }
+
+.btn-primary{ background:var(--ink-900); color:var(--paper-100); box-shadow:var(--shadow-sm); }
+.btn-primary:hover{ box-shadow:var(--shadow-md); transform:translateY(-2px); }
+[data-theme="dark"] .btn-primary{ background:var(--gold-400); color:var(--ink-900); }
+
+.btn-gold{ background:var(--accent); color:var(--accent-ink); box-shadow:var(--shadow-sm); }
+.btn-gold:hover{ box-shadow:var(--shadow-md); transform:translateY(-2px); filter:brightness(1.04); }
+
+.btn-outline{ background:transparent; border-color:var(--border); color:var(--text-primary); }
+.btn-outline:hover{ border-color:var(--accent); background:var(--bg-sunken); transform:translateY(-1px); }
+
+.btn-ghost{ background:transparent; color:var(--text-secondary); }
+.btn-ghost:hover{ color:var(--red-600); }
+
+.btn-block{ width:100%; }
+.btn-sm{ padding:8px 12px; font-size:12.5px; }
+
+.add-item-btn{
+  border:1.5px dashed var(--border); background:transparent; color:var(--text-secondary);
+  border-radius:var(--radius-sm); padding:11px; width:100%;
+  display:flex; align-items:center; justify-content:center; gap:8px; font-weight:600; font-size:13px;
+  transition:border-color .2s ease, color .2s ease, background .2s ease;
+}
+.add-item-btn:hover{ border-color:var(--accent); color:var(--accent); background:var(--bg-sunken); }
+
+/* Totals config */
+.totals-config{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+.totals-config .field.full{ grid-column:1/-1; }
+.discount-combo{ display:grid; grid-template-columns:auto 1fr; gap:8px; }
+.discount-combo select{ width:auto; }
+
+/* Template picker */
+.template-grid{ display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+.template-card{
+  border:1.5px solid var(--border); border-radius:var(--radius-sm); padding:10px 8px;
+  cursor:pointer; text-align:center; transition:border-color .2s ease, transform .2s ease, background .2s ease;
+  background:var(--bg-sunken);
+}
+.template-card:hover{ transform:translateY(-2px); }
+.template-card.active{ border-color:var(--accent); background:rgba(184,134,62,0.1); box-shadow:0 0 0 3px rgba(184,134,62,0.12); }
+.template-swatch{ height:44px; border-radius:5px; margin-bottom:8px; overflow:hidden; display:flex; flex-direction:column; }
+.template-swatch span{ display:block; }
+.tpl-classic-swatch .bar{ height:14px; background:var(--ink-900); }
+.tpl-classic-swatch .rest{ flex:1; background:var(--paper-100); border:1px solid var(--border); border-top:none;}
+.tpl-modern-swatch .bar{ height:6px; background:var(--slate-500); margin:6px 6px 4px; border-radius:2px;}
+.tpl-modern-swatch .rest{ flex:1; background:#fff; border:1px solid var(--border); }
+.tpl-bold-swatch .bar{ height:18px; background:var(--gold-500); }
+.tpl-bold-swatch .rest{ flex:1; background:var(--ink-900); }
+.template-card-label{ font-size:11.5px; font-weight:600; }
+
+.footer-actions{
+  display:flex; flex-wrap:wrap; gap:10px; padding:20px 24px;
+  background:var(--bg-sunken); border-top:1px solid var(--border);
+}
+.footer-actions .btn{ flex:1; min-width:130px; }
+
+/* ============================================================
+   PREVIEW PANEL
+   ============================================================ */
+.preview-col{ position:sticky; top:88px; animation: rise .6s ease .1s both; }
+.preview-toolbar{
+  display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:10px; flex-wrap:wrap;
+}
+.preview-toolbar-title{ font-family:var(--font-display); font-size:15px; color:var(--text-secondary); }
+.preview-toolbar-actions{ display:flex; gap:8px; }
+
+.paper-wrap{
+  background:var(--bg-panel);
+  border-radius:var(--radius-lg);
+  box-shadow:var(--shadow-lg);
+  border:1px solid var(--border);
+  overflow:hidden;
+}
+.perforation{
+  height:14px;
+  background-image: radial-gradient(circle, var(--bg) 3px, transparent 3.5px);
+  background-size: 16px 16px;
+  background-position: center;
+  border-bottom:1px dashed var(--border);
+}
+
+#invoicePaper{
+  background:#FFFFFF;
+  color:#1A2540;
+  padding:40px 44px;
+  min-height:600px;
+  font-family:var(--font-body);
+}
+
+/* ---- Template: Classic Ledger ---- */
+.tpl-classic #invoicePaper{ padding:40px 44px; }
+.tpl-classic .inv-head{ display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:22px; border-bottom:3px solid #1A2540; margin-bottom:26px; }
+.tpl-classic .inv-brandname{ font-family:var(--font-display); font-weight:700; font-size:24px; color:#1A2540; }
+.tpl-classic .inv-title{ font-family:var(--font-display); font-size:30px; font-weight:600; color:#1A2540; text-align:right; }
+.tpl-classic .inv-meta-label{ font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:#75798a; }
+.tpl-classic th{ background:#1A2540; color:#FBF8F2; }
+.tpl-classic .grand-total-box{ background:#1A2540; color:#FBF8F2; }
+.tpl-classic .seal{ border-color:#B8863E; color:#B8863E; }
+
+/* ---- Template: Modern Minimal ---- */
+.tpl-modern #invoicePaper{ padding:44px 48px; }
+.tpl-modern .inv-head{ display:flex; justify-content:space-between; align-items:flex-start; padding-bottom:20px; margin-bottom:26px; }
+.tpl-modern .inv-brandname{ font-family:var(--font-body); font-weight:700; font-size:20px; letter-spacing:-.01em; }
+.tpl-modern .inv-title{ font-family:var(--font-body); font-size:13px; font-weight:700; letter-spacing:.18em; text-transform:uppercase; color:#75798a; text-align:right; }
+.tpl-modern .inv-meta-label{ font-family:var(--font-body); font-size:10px; text-transform:uppercase; letter-spacing:.08em; color:#a3a8b8; font-weight:600; }
+.tpl-modern th{ background:transparent; color:#75798a; border-bottom:1.5px solid #e4e4e4; font-weight:600; text-transform:uppercase; font-size:10.5px; letter-spacing:.06em; }
+.tpl-modern td{ border-bottom:1px solid #eee; }
+.tpl-modern .grand-total-box{ background:#F4EFE4; color:#1A2540; border:1px solid #e4e4e4; }
+.tpl-modern .seal{ display:none; }
+
+/* ---- Template: Bold Accent ---- */
+.tpl-bold #invoicePaper{ padding:0; }
+.tpl-bold .inv-head{ display:flex; justify-content:space-between; align-items:center; padding:30px 44px; background:#1A2540; color:#FBF8F2; margin-bottom:0;}
+.tpl-bold .inv-body-pad{ padding:26px 44px 40px; }
+.tpl-bold .inv-brandname{ font-family:var(--font-display); font-weight:700; font-size:22px; color:#FBF8F2; }
+.tpl-bold .inv-title{ font-family:var(--font-display); font-size:28px; font-weight:600; color:#D1A55E; text-align:right; }
+.tpl-bold .inv-meta-label{ font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.1em; color:#9098AC;}
+.tpl-bold th{ background:#B8863E; color:#1A2540; }
+.tpl-bold .grand-total-box{ background:#1A2540; color:#FBF8F2; border-left:4px solid #B8863E; }
+.tpl-bold .seal{ border-color:#1A2540; color:#1A2540; }
+
+/* shared invoice paper elements */
+.inv-addr-block{ font-size:12.5px; line-height:1.6; color:#42485c; }
+.inv-addr-block .name{ font-weight:700; font-size:14px; color:#1A2540; margin-bottom:2px; }
+.inv-parties{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:18px; margin-bottom:26px; }
+.inv-meta-block{ text-align:right; }
+.inv-meta-row{ margin-bottom:8px; }
+.inv-meta-value{ font-family:var(--font-mono); font-size:13px; font-weight:600; color:#1A2540; }
+
+.inv-logo{ max-height:46px; max-width:150px; margin-bottom:8px; border-radius:4px; }
+
+table.inv-table{ width:100%; border-collapse:collapse; margin-bottom:22px; font-size:12.5px; }
+.inv-table th{ text-align:left; padding:9px 10px; font-size:11px; }
+.inv-table th:nth-child(3), .inv-table th:nth-child(4), .inv-table th:nth-child(5){ text-align:right; }
+.inv-table td{ padding:10px; vertical-align:top; }
+.inv-table td:nth-child(3), .inv-table td:nth-child(4), .inv-table td:nth-child(5){ text-align:right; font-family:var(--font-mono); }
+.inv-item-name{ font-weight:600; color:#1A2540; }
+.inv-item-desc{ color:#75798a; font-size:11.5px; margin-top:2px; }
+
+.inv-totals-wrap{ display:flex; justify-content:flex-end; margin-bottom:28px; }
+.inv-totals{ width:280px; }
+.inv-totals-row{ display:flex; justify-content:space-between; padding:7px 0; font-size:12.5px; color:#42485c; }
+.inv-totals-row.discount{ color:#B5423B; }
+.inv-totals-row span:last-child{ font-family:var(--font-mono); font-weight:600; }
+.grand-total-box{ display:flex; justify-content:space-between; align-items:center; padding:13px 16px; border-radius:8px; margin-top:8px; }
+.grand-total-box .gt-label{ font-size:12px; text-transform:uppercase; letter-spacing:.08em; font-weight:600; }
+.grand-total-box .gt-value{ font-family:var(--font-mono); font-size:19px; font-weight:700; }
+
+.inv-footer{ display:grid; grid-template-columns:1.4fr 1fr; gap:24px; padding-top:20px; border-top:1px solid #ececec; }
+.inv-footer-title{ font-size:10.5px; text-transform:uppercase; letter-spacing:.08em; font-weight:700; color:#75798a; margin-bottom:6px; }
+.inv-footer-text{ font-size:12px; color:#42485c; line-height:1.65; white-space:pre-wrap; }
+
+.seal{
+  position:relative; width:82px; height:82px; border-radius:50%; border:2.5px solid;
+  display:flex; align-items:center; justify-content:center; text-align:center;
+  font-family:var(--font-display); font-size:10.5px; font-weight:600; line-height:1.2;
+  transform:rotate(-8deg); opacity:.9; flex-shrink:0;
+}
+
+.empty-hint{ font-size:11px; color:#a3a8b8; font-style:italic; }
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+.toast{
+  position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(20px);
+  background:var(--ink-900); color:var(--paper-100); padding:13px 22px; border-radius:10px;
+  font-size:13.5px; font-weight:600; box-shadow:var(--shadow-lg);
+  display:flex; align-items:center; gap:10px;
+  opacity:0; pointer-events:none; transition:opacity .3s ease, transform .3s ease;
+  z-index:200;
+}
+.toast.show{ opacity:1; transform:translateX(-50%) translateY(0); }
+.toast svg{ width:16px; height:16px; color:var(--gold-400); flex-shrink:0; }
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+@media (max-width: 640px){
+  .topbar{ padding:12px 16px; }
+  .brand-sub{ display:none; }
+  .app-shell{ padding:14px; gap:16px; }
+  .field-row{ grid-template-columns:1fr; }
+  .item-row{ grid-template-columns:1fr; }
+  .totals-config{ grid-template-columns:1fr; }
+  .template-grid{ grid-template-columns:1fr 1fr 1fr; }
+  #invoicePaper{ padding:26px 20px; }
+  .inv-parties{ grid-template-columns:1fr; gap:14px; }
+  .inv-footer{ grid-template-columns:1fr; }
+  .preview-col{ position:static; }
+  .footer-actions .btn{ min-width:100%; }
+}
+
+/* ============================================================
+   PRINT
+   ============================================================ */
+@media print{
+  body *{ visibility:hidden; }
+  #invoicePaper, #invoicePaper *{ visibility:visible; }
+  #invoicePaper{ position:absolute; top:0; left:0; width:100%; padding:20px 30px; }
+  .paper-wrap, .perforation{ box-shadow:none !important; border:none !important; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     HEADER
+============================================================ -->
+<header class="topbar">
+  <div class="brand">
+    <div class="brand-mark">L</div>
+    <div>
+      <div class="brand-name">Ledgerly</div>
+      <div class="brand-sub">Invoice Generator</div>
+    </div>
+  </div>
+  <div class="topbar-actions">
+    <button class="icon-btn theme-toggle" id="themeToggle" title="Light / Dark Mode" aria-label="Toggle theme">
+      <svg class="sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2.5M12 19.5V22M4.2 4.2l1.8 1.8M18 18l1.8 1.8M2 12h2.5M19.5 12H22M4.2 19.8L6 18M18 6l1.8-1.8"/></svg>
+      <svg class="moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.5 14.5A8.5 8.5 0 1 1 9.5 3.5a7 7 0 0 0 11 11Z"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="app-shell">
+
+  <!-- ============================================================
+       FORM PANEL
+  ============================================================ -->
+  <div class="form-panel">
+
+    <!-- Business info -->
+    <div class="section">
+      <div class="section-head">
+        <span class="section-num">01</span>
+        <span class="section-title">آپ کی کمپنی</span>
+      </div>
+
+      <div class="field" style="margin-bottom:14px;">
+        <label>لوگو <span class="opt">(اختیاری)</span></label>
+        <label class="logo-drop" id="logoDrop">
+          <div class="logo-preview" id="logoPreview">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+          </div>
+          <div class="logo-drop-text"><b>لوگو اپلوڈ کریں</b><br>PNG, JPG (زیادہ سے زیادہ 2MB)</div>
+          <button type="button" class="logo-remove" id="logoRemove" style="display:none;">ہٹائیں</button>
+          <input type="file" id="logoInput" accept="image/*" style="display:none;">
+        </label>
+      </div>
+
+      <div class="field">
+        <label>کمپنی کا نام *</label>
+        <input type="text" id="bizName" placeholder="مثلاً Al-Noor Traders">
+        <div class="error-msg" id="err-bizName">کمپنی کا نام درکار ہے</div>
+      </div>
+      <div class="field">
+        <label>پتہ</label>
+        <textarea id="bizAddress" rows="2" placeholder="کاروبار کا مکمل پتہ"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>فون نمبر</label>
+          <input type="tel" id="bizPhone" placeholder="+92 300 1234567">
+        </div>
+        <div class="field">
+          <label>ای میل</label>
+          <input type="email" id="bizEmail" placeholder="info@company.com">
+        </div>
+      </div>
+    </div>
+
+    <!-- Client info -->
+    <div class="section">
+      <div class="section-head">
+        <span class="section-num">02</span>
+        <span class="section-title">کلائنٹ کی تفصیلات</span>
+      </div>
+      <div class="field">
+        <label>کلائنٹ کا نام *</label>
+        <input type="text" id="clientName" placeholder="مثلاً Ahmed Enterprises">
+        <div class="error-msg" id="err-clientName">کلائنٹ کا نام درکار ہے</div>
+      </div>
+      <div class="field">
+        <label>پتہ</label>
+        <textarea id="clientAddress" rows="2" placeholder="کلائنٹ کا مکمل پتہ"></textarea>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>فون نمبر</label>
+          <input type="tel" id="clientPhone" placeholder="+92 300 1234567">
+        </div>
+        <div class="field">
+          <label>ای میل</label>
+          <input type="email" id="clientEmail" placeholder="client@email.com">
+        </div>
+      </div>
+    </div>
+
+    <!-- Invoice meta -->
+    <div class="section">
+      <div class="section-head">
+        <span class="section-num">03</span>
+        <span class="section-title">انوائس کی تفصیلات</span>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>انوائس نمبر</label>
+          <input type="text" id="invNumber">
+        </div>
+        <div class="field">
+          <label>کرنسی</label>
+          <select id="currency">
+            <option value="PKR">Rs — PKR (پاکستانی روپیہ)</option>
+            <option value="USD">$ — USD (امریکی ڈالر)</option>
+            <option value="EUR">€ — EUR (یورو)</option>
+            <option value="GBP">£ — GBP (برطانوی پاؤنڈ)</option>
+            <option value="AED">AED — درہم</option>
+            <option value="SAR">SAR — سعودی ریال</option>
+            <option value="INR">₹ — INR (بھارتی روپیہ)</option>
+          </select>
+        </div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>انوائس تاریخ *</label>
+          <input type="date" id="invDate">
+          <div class="error-msg" id="err-invDate">تاریخ منتخب کریں</div>
+        </div>
+        <div class="field">
+          <label>آخری تاریخ (Due Date)</label>
+          <input type="date" id="dueDate">
+        </div>
+      </div>
+    </div>
+
+    <!-- Items -->
+    <div class="section">
+      <div class="section-head">
+        <span class="section-num">04</span>
+        <span class="section-title">آئٹمز / سروسز</span>
+      </div>
+      <div class="items-list" id="itemsList"></div>
+      <div class="error-msg" id="err-items" style="margin-top:8px;">کم از کم ایک آئٹم شامل کریں جس میں مقدار اور قیمت ہو</div>
+      <button type="button" class="add-item-btn" id="addItemBtn" style="margin-top:10px;">
+        <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        نیا آئٹم شامل کریں
+      </button>
+    </div>
+
+    <!-- Totals config -->
+    <div class="section">
+      <div class="section-head">
+        <span class="section-num">05</span>
+        <span class="section-title">ٹیکس اور ڈسکاؤنٹ</span>
+      </div>
+      <div class="totals-config">
+        <div class="field">
+          <label>ٹیکس (%)</label>
+          <input type="number" id="taxRate" min="0" max="100" step="0.1" value="0">
+        </div>
+        <div class="field">
+          <label>ڈسکاؤنٹ</label>
+          <div class="discount-combo">
+            <select id="discountType">
+              <option value="fixed">رقم</option>
+              <option value="percent">فیصد %</option>
+            </select>
+            <input type="number" id="discountValue" min="0" step="0.01" value="0">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Notes & payment -->
+    <div class="section">
+      <div class="section-head">
+        <span class="section-num">06</span>
+        <span class="section-title">نوٹس اور ادائیگی</span>
+      </div>
+      <div class="field">
+        <label>نوٹس / شرائط و ضوابط</label>
+        <textarea id="notes" rows="3" placeholder="مثلاً: ادائیگی 15 دن کے اندر کریں۔ تاخیر پر 2% اضافی چارج ہوگا۔"></textarea>
+      </div>
+      <div class="field">
+        <label>ادائیگی کی تفصیلات</label>
+        <textarea id="paymentDetails" rows="3" placeholder="بینک اکاؤنٹ / JazzCash / EasyPaisa کی تفصیل"></textarea>
+      </div>
+    </div>
+
+    <!-- Template picker -->
+    <div class="section">
+      <div class="section-head">
+        <span class="section-num">07</span>
+        <span class="section-title">ٹیمپلیٹ منتخب کریں</span>
+      </div>
+      <div class="template-grid">
+        <div class="template-card active" data-template="tpl-classic">
+          <div class="template-swatch tpl-classic-swatch"><span class="bar"></span><span class="rest"></span></div>
+          <div class="template-card-label">کلاسک لیجر</div>
+        </div>
+        <div class="template-card" data-template="tpl-modern">
+          <div class="template-swatch tpl-modern-swatch"><span class="bar"></span><span class="rest"></span></div>
+          <div class="template-card-label">ماڈرن منیمل</div>
+        </div>
+        <div class="template-card" data-template="tpl-bold">
+          <div class="template-swatch tpl-bold-swatch"><span class="bar"></span><span class="rest"></span></div>
+          <div class="template-card-label">بولڈ گولڈ</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer-actions">
+      <button class="btn btn-gold" id="downloadPdfBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+        PDF ڈاؤن لوڈ کریں
+      </button>
+      <button class="btn btn-outline" id="printBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+        پرنٹ کریں
+      </button>
+      <button class="btn btn-ghost" id="resetBtn">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg>
+        فارم ری سیٹ کریں
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================================
+       PREVIEW PANEL
+  ============================================================ -->
+  <div class="preview-col">
+    <div class="preview-toolbar">
+      <div class="preview-toolbar-title">لائیو پریویو</div>
+    </div>
+    <div class="paper-wrap tpl-classic" id="paperWrap">
+      <div class="perforation"></div>
+      <div id="invoicePaper">
+        <!-- populated by JS -->
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>
+  <span id="toastMsg">محفوظ ہو گیا</span>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  /* ============================================================
+     STATE
+  ============================================================ */
+  const STORAGE_KEY = "ledgerly_invoice_data_v1";
+  let itemCounter = 0;
+
+  const CURRENCY_SYMBOLS = {
+    PKR:"Rs", USD:"$", EUR:"€", GBP:"£", AED:"AED", SAR:"SAR", INR:"₹"
+  };
+
+  const els = {
+    themeToggle: document.getElementById("themeToggle"),
+    logoDrop: document.getElementById("logoDrop"),
+    logoInput: document.getElementById("logoInput"),
+    logoPreview: document.getElementById("logoPreview"),
+    logoRemove: document.getElementById("logoRemove"),
+    bizName: document.getElementById("bizName"),
+    bizAddress: document.getElementById("bizAddress"),
+    bizPhone: document.getElementById("bizPhone"),
+    bizEmail: document.getElementById("bizEmail"),
+    clientName: document.getElementById("clientName"),
+    clientAddress: document.getElementById("clientAddress"),
+    clientPhone: document.getElementById("clientPhone"),
+    clientEmail: document.getElementById("clientEmail"),
+    invNumber: document.getElementById("invNumber"),
+    currency: document.getElementById("currency"),
+    invDate: document.getElementById("invDate"),
+    dueDate: document.getElementById("dueDate"),
+    itemsList: document.getElementById("itemsList"),
+    addItemBtn: document.getElementById("addItemBtn"),
+    taxRate: document.getElementById("taxRate"),
+    discountType: document.getElementById("discountType"),
+    discountValue: document.getElementById("discountValue"),
+    notes: document.getElementById("notes"),
+    paymentDetails: document.getElementById("paymentDetails"),
+    invoicePaper: document.getElementById("invoicePaper"),
+    paperWrap: document.getElementById("paperWrap"),
+    downloadPdfBtn: document.getElementById("downloadPdfBtn"),
+    printBtn: document.getElementById("printBtn"),
+    resetBtn: document.getElementById("resetBtn"),
+    toast: document.getElementById("toast"),
+    toastMsg: document.getElementById("toastMsg"),
+  };
+
+  let logoDataUrl = null;
+
+  /* ============================================================
+     UTIL
+  ============================================================ */
+  function escapeHtml(str){
+    if(str===undefined || str===null) return "";
+    return String(str).replace(/[&<>"']/g, function(c){
+      return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c];
+    });
+  }
+  function fmtNum(n){
+    n = isNaN(n) ? 0 : n;
+    return n.toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+  }
+  function currencySymbol(){ return CURRENCY_SYMBOLS[els.currency.value] || els.currency.value; }
+  function money(n){ return currencySymbol() + " " + fmtNum(n); }
+  function showToast(msg){
+    els.toastMsg.textContent = msg;
+    els.toast.classList.add("show");
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(()=> els.toast.classList.remove("show"), 2200);
+  }
+  function todayISO(){ return new Date().toISOString().slice(0,10); }
+  function addDaysISO(iso, days){
+    const d = iso ? new Date(iso) : new Date();
+    d.setDate(d.getDate() + days);
+    return d.toISOString().slice(0,10);
+  }
+  function generateInvoiceNumber(){
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth()+1).padStart(2,"0");
+    const rand = String(Math.floor(1000 + Math.random()*9000));
+    return `INV-${y}${m}-${rand}`;
+  }
+  function formatDateDisplay(iso){
+    if(!iso) return "—";
+    const d = new Date(iso + "T00:00:00");
+    if(isNaN(d)) return iso;
+    return d.toLocaleDateString('en-GB', {day:'2-digit', month:'short', year:'numeric'});
+  }
+
+  /* ============================================================
+     ITEM ROWS
+  ============================================================ */
+  function addItemRow(data){
+    data = data || {};
+    itemCounter++;
+    const id = "item_" + itemCounter;
+    const row = document.createElement("div");
+    row.className = "item-row";
+    row.dataset.id = id;
+    row.innerHTML = `
+      <div class="item-row-top">
+        <span class="item-index">آئٹم #${document.querySelectorAll('.item-row').length + 1}</span>
+        <button type="button" class="item-delete" title="حذف کریں" aria-label="Delete item">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
+        </button>
+      </div>
+      <div class="field field-full">
+        <label>آئٹم / سروس کا نام</label>
+        <input type="text" class="it-name" placeholder="مثلاً ویب ڈیزائن سروس" value="${escapeHtml(data.name||"")}">
+      </div>
+      <div class="field field-full">
+        <label>تفصیل <span class="opt">(اختیاری)</span></label>
+        <input type="text" class="it-desc" placeholder="مختصر تفصیل" value="${escapeHtml(data.desc||"")}">
+      </div>
+      <div class="field">
+        <label>مقدار</label>
+        <input type="number" class="it-qty" min="0" step="0.01" value="${data.qty!==undefined?data.qty:1}">
+      </div>
+      <div class="field">
+        <label>فی یونٹ قیمت</label>
+        <input type="number" class="it-rate" min="0" step="0.01" value="${data.rate!==undefined?data.rate:""}">
+      </div>
+      <div class="item-line-total field-full">جمع: <b class="it-total-display">${money(0)}</b></div>
+    `;
+    els.itemsList.appendChild(row);
+
+    row.querySelector(".item-delete").addEventListener("click", function(){
+      if(document.querySelectorAll('.item-row').length <= 1){
+        showToast("کم از کم ایک آئٹم ضروری ہے");
+        return;
+      }
+      row.style.transition = "opacity .25s ease, transform .25s ease";
+      row.style.opacity = "0";
+      row.style.transform = "translateX(12px)";
+      setTimeout(()=>{ row.remove(); renumberItems(); updateAll(); }, 220);
+    });
+
+    row.querySelectorAll("input").forEach(inp => {
+      inp.addEventListener("input", updateAll);
+    });
+
+    return row;
+  }
+
+  function renumberItems(){
+    document.querySelectorAll(".item-row").forEach((row, i) => {
+      row.querySelector(".item-index").textContent = "آئٹم #" + (i+1);
+    });
+  }
+
+  function getItemsData(){
+    return Array.from(document.querySelectorAll(".item-row")).map(row => {
+      const qty = parseFloat(row.querySelector(".it-qty").value) || 0;
+      const rate = parseFloat(row.querySelector(".it-rate").value) || 0;
+      return {
+        name: row.querySelector(".it-name").value.trim(),
+        desc: row.querySelector(".it-desc").value.trim(),
+        qty: qty,
+        rate: rate,
+        total: qty * rate,
+        rowEl: row
+      };
+    });
+  }
+
+  /* ============================================================
+     CALCULATIONS
+  ============================================================ */
+  function calcTotals(items){
+    const subtotal = items.reduce((s,i)=> s + i.total, 0);
+    let discountAmt = parseFloat(els.discountValue.value) || 0;
+    if(els.discountType.value === "percent"){
+      discountAmt = subtotal * (discountAmt/100);
+    }
+    discountAmt = Math.min(discountAmt, subtotal);
+    if(discountAmt < 0) discountAmt = 0;
+
+    const taxRate = parseFloat(els.taxRate.value) || 0;
+    const taxable = subtotal - discountAmt;
+    const taxAmt = taxable * (taxRate/100);
+    const grandTotal = taxable + taxAmt;
+
+    return { subtotal, discountAmt, taxRate, taxAmt, grandTotal };
+  }
+
+  /* ============================================================
+     LIVE PREVIEW RENDER
+  ============================================================ */
+  function renderPreview(){
+    const items = getItemsData();
+    document.querySelectorAll(".item-row").forEach(row => {
+      const qty = parseFloat(row.querySelector(".it-qty").value) || 0;
+      const rate = parseFloat(row.querySelector(".it-rate").value) || 0;
+      row.querySelector(".it-total-display").textContent = money(qty*rate);
+    });
+
+    const totals = calcTotals(items);
+    const validItems = items.filter(i => i.name || i.qty || i.rate);
+
+    const bizName = els.bizName.value.trim() || "آپ کی کمپنی کا نام";
+    const bizAddress = els.bizAddress.value.trim();
+    const bizPhone = els.bizPhone.value.trim();
+    const bizEmail = els.bizEmail.value.trim();
+
+    const clientName = els.clientName.value.trim() || "کلائنٹ کا نام";
+    const clientAddress = els.clientAddress.value.trim();
+    const clientPhone = els.clientPhone.value.trim();
+    const clientEmail = els.clientEmail.value.trim();
+
+    const invNumber = els.invNumber.value.trim() || generateInvoiceNumber();
+    const invDate = els.invDate.value;
+    const dueDate = els.dueDate.value;
+
+    const itemsRows = validItems.length ? validItems.map(i => `
+        <tr>
+          <td>
+            <div class="inv-item-name">${escapeHtml(i.name || "—")}</div>
+            ${i.desc ? `<div class="inv-item-desc">${escapeHtml(i.desc)}</div>` : ""}
+          </td>
+          <td>${fmtNum(i.qty)}</td>
+          <td>${money(i.rate)}</td>
+          <td>${money(i.total)}</td>
+        </tr>
+      `).join("") : `<tr><td colspan="4"><span class="empty-hint">ابھی تک کوئی آئٹم شامل نہیں کیا گیا</span></td></tr>`;
+
+    const logoHtml = logoDataUrl ? `<img class="inv-logo" src="${logoDataUrl}" alt="logo">` : "";
+
+    const notesHtml = els.notes.value.trim();
+    const paymentHtml = els.paymentDetails.value.trim();
+
+    const html = `
+      <div class="inv-head">
+        <div>
+          ${logoHtml}
+          <div class="inv-brandname">${escapeHtml(bizName)}</div>
+          <div class="inv-addr-block" style="margin-top:6px;">
+            ${bizAddress ? escapeHtml(bizAddress).replace(/\n/g,"<br>") + "<br>" : ""}
+            ${bizPhone ? escapeHtml(bizPhone) + "<br>" : ""}
+            ${bizEmail ? escapeHtml(bizEmail) : ""}
+          </div>
+        </div>
+        <div class="inv-title">INVOICE</div>
+      </div>
+
+      <div class="${document.querySelector('.paper-wrap').classList.contains('tpl-bold') ? 'inv-body-pad' : ''}">
+      <div class="inv-parties">
+        <div>
+          <div class="inv-meta-label">بل کیا جائے</div>
+          <div class="inv-addr-block" style="margin-top:6px;">
+            <div class="name">${escapeHtml(clientName)}</div>
+            ${clientAddress ? escapeHtml(clientAddress).replace(/\n/g,"<br>") + "<br>" : ""}
+            ${clientPhone ? escapeHtml(clientPhone) + "<br>" : ""}
+            ${clientEmail ? escapeHtml(clientEmail) : ""}
+          </div>
+        </div>
+        <div class="inv-meta-block">
+          <div class="inv-meta-row">
+            <div class="inv-meta-label">انوائس نمبر</div>
+            <div class="inv-meta-value">${escapeHtml(invNumber)}</div>
+          </div>
+        </div>
+        <div class="inv-meta-block">
+          <div class="inv-meta-row">
+            <div class="inv-meta-label">تاریخ</div>
+            <div class="inv-meta-value">${formatDateDisplay(invDate)}</div>
+          </div>
+          <div class="inv-meta-row">
+            <div class="inv-meta-label">آخری تاریخ</div>
+            <div class="inv-meta-value">${formatDateDisplay(dueDate)}</div>
+          </div>
+        </div>
+      </div>
+
+      <table class="inv-table">
+        <thead>
+          <tr>
+            <th>تفصیل</th>
+            <th>مقدار</th>
+            <th>ریٹ</th>
+            <th>جمع</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${itemsRows}
+        </tbody>
+      </table>
+
+      <div class="inv-totals-wrap">
+        <div class="inv-totals">
+          <div class="inv-totals-row">
+            <span>سب ٹوٹل</span><span>${money(totals.subtotal)}</span>
+          </div>
+          ${totals.discountAmt > 0 ? `
+          <div class="inv-totals-row discount">
+            <span>ڈسکاؤنٹ</span><span>- ${money(totals.discountAmt)}</span>
+          </div>` : ""}
+          ${totals.taxRate > 0 ? `
+          <div class="inv-totals-row">
+            <span>ٹیکس (${fmtNum(totals.taxRate)}%)</span><span>${money(totals.taxAmt)}</span>
+          </div>` : ""}
+          <div class="grand-total-box">
+            <span class="gt-label">کل رقم</span>
+            <span class="gt-value">${money(totals.grandTotal)}</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="inv-footer">
+        <div>
+          ${notesHtml ? `<div class="inv-footer-title">نوٹس / شرائط</div><div class="inv-footer-text">${escapeHtml(notesHtml)}</div>` : ""}
+          ${paymentHtml ? `<div class="inv-footer-title" style="margin-top:14px;">ادائیگی کی تفصیل</div><div class="inv-footer-text">${escapeHtml(paymentHtml)}</div>` : ""}
+        </div>
+        <div style="display:flex; justify-content:flex-end; align-items:flex-start;">
+          <div class="seal">${fmtNum(totals.grandTotal) ? "TOTAL DUE" : ""}</div>
+        </div>
+      </div>
+      </div>
+    `;
+
+    els.invoicePaper.innerHTML = html;
+  }
+
+  /* ============================================================
+     VALIDATION
+  ============================================================ */
+  function clearErrors(){
+    document.querySelectorAll(".invalid").forEach(el => el.classList.remove("invalid"));
+    document.querySelectorAll(".error-msg").forEach(el => el.classList.remove("show"));
+  }
+  function markInvalid(inputEl, errId){
+    inputEl.classList.add("invalid");
+    const err = document.getElementById(errId);
+    if(err) err.classList.add("show");
+  }
+  function validateForm(){
+    clearErrors();
+    let firstInvalid = null;
+    let ok = true;
+
+    if(!els.bizName.value.trim()){
+      markInvalid(els.bizName, "err-bizName"); ok = false;
+      firstInvalid = firstInvalid || els.bizName;
+    }
+    if(!els.clientName.value.trim()){
+      markInvalid(els.clientName, "err-clientName"); ok = false;
+      firstInvalid = firstInvalid || els.clientName;
+    }
+    if(!els.invDate.value){
+      markInvalid(els.invDate, "err-invDate"); ok = false;
+      firstInvalid = firstInvalid || els.invDate;
+    }
+    const items = getItemsData();
+    const hasValidItem = items.some(i => i.name && i.qty > 0 && i.rate >= 0);
+    if(!hasValidItem){
+      document.getElementById("err-items").classList.add("show");
+      ok = false;
+      firstInvalid = firstInvalid || els.itemsList;
+    }
+
+    if(!ok && firstInvalid){
+      firstInvalid.scrollIntoView({behavior:"smooth", block:"center"});
+      showToast("براہ کرم درکار خانے مکمل کریں");
+    }
+    return ok;
+  }
+
+  /* ============================================================
+     PERSISTENCE (localStorage)
+  ============================================================ */
+  function saveState(){
+    const data = {
+      theme: document.documentElement.getAttribute("data-theme"),
+      template: document.querySelector(".template-card.active")?.dataset.template || "tpl-classic",
+      logo: logoDataUrl,
+      biz: { name: els.bizName.value, address: els.bizAddress.value, phone: els.bizPhone.value, email: els.bizEmail.value },
+      client: { name: els.clientName.value, address: els.clientAddress.value, phone: els.clientPhone.value, email: els.clientEmail.value },
+      invNumber: els.invNumber.value,
+      currency: els.currency.value,
+      invDate: els.invDate.value,
+      dueDate: els.dueDate.value,
+      items: getItemsData().map(i => ({name:i.name, desc:i.desc, qty:i.qty, rate:i.rate})),
+      taxRate: els.taxRate.value,
+      discountType: els.discountType.value,
+      discountValue: els.discountValue.value,
+      notes: els.notes.value,
+      paymentDetails: els.paymentDetails.value,
+    };
+    try{ localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }catch(e){ /* storage full or unavailable */ }
+  }
+
+  let saveTimer = null;
+  function scheduleSave(){
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveState, 300);
+  }
+
+  function loadState(){
+    let raw;
+    try{ raw = localStorage.getItem(STORAGE_KEY); }catch(e){ raw = null; }
+    if(!raw) return false;
+    let data;
+    try{ data = JSON.parse(raw); }catch(e){ return false; }
+
+    if(data.theme) document.documentElement.setAttribute("data-theme", data.theme);
+    if(data.logo){ logoDataUrl = data.logo; setLogoPreview(data.logo); }
+
+    if(data.biz){
+      els.bizName.value = data.biz.name || "";
+      els.bizAddress.value = data.biz.address || "";
+      els.bizPhone.value = data.biz.phone || "";
+      els.bizEmail.value = data.biz.email || "";
+    }
+    if(data.client){
+      els.clientName.value = data.client.name || "";
+      els.clientAddress.value = data.client.address || "";
+      els.clientPhone.value = data.client.phone || "";
+      els.clientEmail.value = data.client.email || "";
+    }
+    els.invNumber.value = data.invNumber || generateInvoiceNumber();
+    els.currency.value = data.currency || "PKR";
+    els.invDate.value = data.invDate || todayISO();
+    els.dueDate.value = data.dueDate || addDaysISO(els.invDate.value, 15);
+    els.taxRate.value = (data.taxRate !== undefined) ? data.taxRate : 0;
+    els.discountType.value = data.discountType || "fixed";
+    els.discountValue.value = (data.discountValue !== undefined) ? data.discountValue : 0;
+    els.notes.value = data.notes || "";
+    els.paymentDetails.value = data.paymentDetails || "";
+
+    els.itemsList.innerHTML = "";
+    itemCounter = 0;
+    if(data.items && data.items.length){
+      data.items.forEach(it => addItemRow(it));
+    } else {
+      addItemRow();
+    }
+
+    if(data.template){
+      document.querySelectorAll(".template-card").forEach(c => c.classList.toggle("active", c.dataset.template === data.template));
+      els.paperWrap.className = "paper-wrap " + data.template;
+    }
+    return true;
+  }
+
+  /* ============================================================
+     LOGO HANDLING
+  ============================================================ */
+  function setLogoPreview(dataUrl){
+    if(dataUrl){
+      els.logoPreview.innerHTML = `<img src="${dataUrl}" alt="logo">`;
+      els.logoRemove.style.display = "inline";
+    } else {
+      els.logoPreview.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`;
+      els.logoRemove.style.display = "none";
+    }
+  }
+  els.logoInput.addEventListener("change", function(e){
+    const file = e.target.files[0];
+    if(!file) return;
+    if(file.size > 2*1024*1024){
+      showToast("لوگو کا سائز 2MB سے کم ہونا چاہیے");
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = function(ev){
+      logoDataUrl = ev.target.result;
+      setLogoPreview(logoDataUrl);
+      updateAll();
+    };
+    reader.readAsDataURL(file);
+  });
+  els.logoRemove.addEventListener("click", function(e){
+    e.preventDefault(); e.stopPropagation();
+    logoDataUrl = null;
+    els.logoInput.value = "";
+    setLogoPreview(null);
+    updateAll();
+  });
+
+  /* ============================================================
+     TEMPLATE SWITCH
+  ============================================================ */
+  document.querySelectorAll(".template-card").forEach(card => {
+    card.addEventListener("click", function(){
+      document.querySelectorAll(".template-card").forEach(c => c.classList.remove("active"));
+      card.classList.add("active");
+      els.paperWrap.className = "paper-wrap " + card.dataset.template;
+      updateAll();
+    });
+  });
+
+  /* ============================================================
+     THEME TOGGLE
+  ============================================================ */
+  els.themeToggle.addEventListener("click", function(){
+    const cur = document.documentElement.getAttribute("data-theme");
+    const next = cur === "dark" ? "light" : "dark";
+    document.documentElement.setAttribute("data-theme", next);
+    scheduleSave();
+  });
+
+  /* ============================================================
+     ADD ITEM
+  ============================================================ */
+  els.addItemBtn.addEventListener("click", function(){
+    addItemRow();
+    updateAll();
+  });
+
+  /* ============================================================
+     GLOBAL INPUT LISTENERS
+  ============================================================ */
+  function bindLiveInputs(){
+    const allInputs = [
+      els.bizName, els.bizAddress, els.bizPhone, els.bizEmail,
+      els.clientName, els.clientAddress, els.clientPhone, els.clientEmail,
+      els.invNumber, els.currency, els.invDate, els.dueDate,
+      els.taxRate, els.discountType, els.discountValue,
+      els.notes, els.paymentDetails
+    ];
+    allInputs.forEach(inp => {
+      inp.addEventListener("input", updateAll);
+      inp.addEventListener("change", updateAll);
+    });
+  }
+
+  function updateAll(){
+    renderPreview();
+    scheduleSave();
+  }
+
+  /* ============================================================
+     PDF DOWNLOAD
+  ============================================================ */
+  els.downloadPdfBtn.addEventListener("click", function(){
+    if(!validateForm()) return;
+    const el = els.invoicePaper;
+    const invNum = els.invNumber.value.trim() || "invoice";
+    showToast("PDF تیار کیا جا رہا ہے...");
+    const opt = {
+      margin: 0,
+      filename: `${invNum}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true, backgroundColor:"#ffffff" },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+    html2pdf().set(opt).from(el).save().then(()=>{
+      showToast("PDF ڈاؤن لوڈ ہو گئی");
+    }).catch(()=>{
+      showToast("PDF بنانے میں مسئلہ ہوا");
+    });
+  });
+
+  /* ============================================================
+     PRINT
+  ============================================================ */
+  els.printBtn.addEventListener("click", function(){
+    if(!validateForm()) return;
+    window.print();
+  });
+
+  /* ============================================================
+     RESET
+  ============================================================ */
+  els.resetBtn.addEventListener("click", function(){
+    if(!confirm("کیا آپ واقعی پورا فارم ری سیٹ کرنا چاہتے ہیں؟ تمام ڈیٹا ضائع ہو جائے گا۔")) return;
+    try{ localStorage.removeItem(STORAGE_KEY); }catch(e){}
+    logoDataUrl = null;
+    els.logoInput.value = "";
+    setLogoPreview(null);
+
+    [els.bizName, els.bizAddress, els.bizPhone, els.bizEmail,
+     els.clientName, els.clientAddress, els.clientPhone, els.clientEmail,
+     els.notes, els.paymentDetails].forEach(el => el.value = "");
+
+    els.invNumber.value = generateInvoiceNumber();
+    els.currency.value = "PKR";
+    els.invDate.value = todayISO();
+    els.dueDate.value = addDaysISO(els.invDate.value, 15);
+    els.taxRate.value = 0;
+    els.discountType.value = "fixed";
+    els.discountValue.value = 0;
+
+    els.itemsList.innerHTML = "";
+    itemCounter = 0;
+    addItemRow();
+
+    document.querySelectorAll(".template-card").forEach(c => c.classList.remove("active"));
+    document.querySelector('[data-template="tpl-classic"]').classList.add("active");
+    els.paperWrap.className = "paper-wrap tpl-classic";
+
+    clearErrors();
+    updateAll();
+    showToast("فارم ری سیٹ ہو گیا");
+  });
+
+  /* ============================================================
+     INIT
+  ============================================================ */
+  function init(){
+    bindLiveInputs();
+    const restored = loadState();
+    if(!restored){
+      els.invNumber.value = generateInvoiceNumber();
+      els.invDate.value = todayISO();
+      els.dueDate.value = addDaysISO(els.invDate.value, 15);
+      addItemRow();
+    }
+    renumberItems();
+    updateAll();
+  }
+
+  init();
+})();
+</script>
+</body>
+</html>
